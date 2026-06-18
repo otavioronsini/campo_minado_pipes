@@ -75,69 +75,110 @@ void conta_bombas(const int tam, int mat[tam][tam])
     }
 }
 
-// TODO: usar busca em largura com fila pra melhorar a velocidade
-
+/**
+ * Função que revela as células a partir de uma posição (usr_lin, usr_col)
+ * usando Busca em Largura (BFS) com fila manual.
+ * 
+ * Parâmetros:
+ *   tam     : tamanho da matriz (tam x tam)
+ *   mat     : matriz com os valores (-1 = bomba, 0 = vazio, 1..8 = número de bombas)
+ *   visivel : matriz que indica se a célula já foi revelada (1) ou não (0)
+ *   usr_lin, usr_col : coordenada escolhida pelo usuário
+ * 
+ * Retorno:
+ *   -1 se clicou em bomba (e revela tudo)
+ *    0 se abriu células com segurança
+ *    ou o valor da célula se já estava visível (opcional)
+ */
+ 
 int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, int usr_col)
 {
-    // posição já é visível
-    
+    // 1) Se a posição já está visível, não faz nada e retorna o valor dela
     if (visivel[usr_lin][usr_col] == 1)
     {
         return mat[usr_lin][usr_col];
     }
 
-    // se não for, marca posição como visível
-
-    visivel[usr_lin][usr_col] = 1;
-    
-    // posição vale >= 1, marca só ela (já foi)
-
-    if (mat[usr_lin][usr_col] >= 1)
-    {
-        
-        return mat[usr_lin][usr_col];
-    }
-
-    // posição vale -1, marca tudo
-
+    // 2) Se a posição é uma bomba (-1), revela todas as células e termina o jogo
     if (mat[usr_lin][usr_col] == -1)
     {
-        for (int lin = 0; lin < tam; lin++)
+        // Revela tudo (perdeu)
+        for (int i = 0; i < tam; i++)
         {
-            for (int col = 0; col < tam; col++)
+            for (int j = 0; j < tam; j++)
             {
-                visivel[lin][col] = 1;
+                visivel[i][j] = 1;
             }
         }
-
-        return -1;
+        return -1;   // indica que foi bomba
     }
 
-    // posição vale 0, mostra as posições >= 0 ligadas
+    // 3) Se não é bomba, vamos usar uma fila para fazer a expansão em largura
+    // Criamos dois vetores para armazenar as coordenadas (linha e coluna) das células a serem processadas.
+    // O tamanho máximo da fila é tam * tam (todas as células da matriz).
+    int fila_linha[tam * tam];
+    int fila_coluna[tam * tam];
+    
+    // Índices para controlar a fila:
+    // - 'inicio' aponta para o próximo elemento a ser processado
+    // - 'fim' aponta para a próxima posição vazia onde podemos adicionar um novo elemento
+    int inicio = 0;
+    int fim = 0;
 
-    for (int lin = usr_lin - 1; lin <= usr_lin + 1; lin++)
+    // Colocamos a célula inicial (usr_lin, usr_col) na fila e a marcamos como visível
+    fila_linha[fim] = usr_lin;
+    fila_coluna[fim] = usr_col;
+    fim++;  // incrementa para a próxima posição livre
+
+    visivel[usr_lin][usr_col] = 1;   // marca como já revelada
+
+    // Agora, enquanto houver elementos na fila (inicio < fim), processamos cada um
+    while (inicio < fim)
     {
-        for (int col = usr_col - 1; col <= usr_col + 1; col++)
-        {
-            // Verifica limites
-            
-            if (lin >= 0 && lin < tam && col >= 0 && col < tam)
-            {
-                // se valer > 0, marca
-                
-                if (mat[lin][col] > 0 && visivel[lin][col] == 0)
-                {
-                    visivel[lin][col] = 1;
-                }
+        // Pega a próxima célula da fila (a que está no índice 'inicio')
+        int lin = fila_linha[inicio];
+        int col = fila_coluna[inicio];
+        inicio++;   // avança o ponteiro de início
 
-                if (mat[lin][col] == 0)
+        // Se a célula atual tem um número > 0, ela não deve se expandir para os vizinhos.
+        // Apenas a revelamos (já está visível) e pulamos a parte de adicionar vizinhos.
+        if (mat[lin][col] > 0)
+        {
+            continue;   // vai para a próxima iteração do while, sem expandir
+        }
+
+        // Se a célula atual é 0, precisamos olhar todos os seus vizinhos (8 direções)
+        // e, se eles ainda não estiverem visíveis e não forem bombas, adicioná-los à fila.
+        for (int dlin = -1; dlin <= 1; dlin++)
+        {
+            for (int dcol = -1; dcol <= 1; dcol++)
+            {
+                // Ignora o próprio (deslocamento 0,0)
+                if (dlin == 0 && dcol == 0)
+                    continue;
+
+                // Calcula as coordenadas do vizinho
+                int nlin = lin + dlin;
+                int ncol = col + dcol;
+
+                // Verifica se o vizinho está dentro dos limites da matriz
+                if (nlin >= 0 && nlin < tam && ncol >= 0 && ncol < tam)
                 {
-                    set_visivel(tam, mat, visivel, lin, col);
+                    // Se o vizinho ainda não está visível e não é uma bomba
+                    if (visivel[nlin][ncol] == 0 && mat[nlin][ncol] != -1)
+                    {
+                        // Marca como visível e adiciona na fila para ser processado depois
+                        visivel[nlin][ncol] = 1;
+                        fila_linha[fim] = nlin;
+                        fila_coluna[fim] = ncol;
+                        fim++;   // aumenta o tamanho da fila
+                    }
                 }
             }
         }
     }
 
+    // Se chegou até aqui, tudo correu bem e nenhuma bomba foi aberta
     return 0;
 }
 

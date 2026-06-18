@@ -1,13 +1,17 @@
-#include <_stdio.h>
+// TODO: comentar melhor cada parte do código
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#define AZUL     "\033[94m"
-#define AMARELO  "\033[33m"
-#define VERDE    "\033[32m"
-#define VERMELHO "\033[31m"
-#define RESET    "\033[39m"
+#define RESET     "\033[0m"
+#define VERMELHO  "\033[91m"
+#define VERDE     "\033[92m"
+#define AMARELO   "\033[93m"
+#define AZUL      "\033[94m"
+#define ROSA      "\033[95m"
+#define CIANO     "\033[96m"
+#define BRANCO    "\033[97m"
 
 // TODO: trocar tipo da mat2 pra byte pra gastar menos memória
 
@@ -37,6 +41,9 @@ void coloca_bombas(int tam, int mat[tam][tam])
         }
     }
 }
+
+// TODO: garantir que duas bombas não fiquem no mesmo lugar e
+// sejam colocadas depois da primeira posição que o usuário escolher
 
 void conta_bombas(const int tam, int mat[tam][tam])
 {
@@ -191,52 +198,132 @@ void clear()
     #endif
 }
 
-// TODO: mostrar só o que for visível
-
-void print_mat(int tam, int mat[tam][tam])
+void print_mat(int tam, int mat[tam][tam], int visivel[tam][tam])
 {
     // número das colunas em azul
     
-    printf("\n  " AZUL);
+    printf("\n  ");
 
     for (int i = 0; i < tam; i++)
     {
         printf("%4d", i);
     }
 
-    printf("\n\n" RESET);   
+    printf("\n\n");   
     
     for (int i = 0; i < tam; i++)
     {
         // número das linhas em azul
         
-        printf(AZUL "%-2d" RESET, i);
+        printf("%-2d", i);
 
         // numeros de cada posição
         
         for (int j = 0; j < tam; j++)
         {
-            switch (mat[i][j])
+            if (visivel[i][j] == 0)
             {
-                case -1:
-                    printf(VERMELHO "%4d" RESET, mat[i][j]);
-                    break;
-                case 1:
-                    printf(VERDE "%4d" RESET, mat[i][j]);
-                    break;
-                case 2:
-                    printf(AMARELO "%4d" RESET, mat[i][j]);
-                    break;
-                default:
-                    printf("%4d", mat[i][j]);
-                    break;
+                printf("   -");
+            }
+            else
+            { 
+                switch (mat[i][j])
+                {
+                    case -1:
+                        printf(VERMELHO "   #" RESET);
+                        break;
+                    case 0:
+                        printf(BRANCO "%4d" RESET, mat[i][j]);
+                        break;
+                    case 1:
+                        printf(AZUL "%4d" RESET, mat[i][j]);
+                        break;
+                    case 2:
+                        printf(CIANO "%4d" RESET, mat[i][j]);
+                        break;
+                    case 3:
+                        printf(VERDE "%4d" RESET, mat[i][j]);
+                        break;
+                    case 4:
+                        printf(AMARELO "%4d" RESET, mat[i][j]);
+                        break;
+                        
+                    default:
+                        printf(ROSA "%4d" RESET, mat[i][j]);
+                        break;
+                }
             }
         }
         
         printf("\n");
     }
-    
-    printf("\n" AZUL "linha coluna: " RESET);
+}
+
+// cola pra mostrar a vitória
+void print_mat_bombas(int tam, int mat[tam][tam])
+{
+    printf("\n  ");
+
+    // cabeçalho das colunas
+    for (int i = 0; i < tam; i++)
+        printf("%4d", i);
+    printf("\n\n");
+
+    for (int i = 0; i < tam; i++)
+    {
+        // número da linha
+        printf("%-2d", i);
+
+        for (int j = 0; j < tam; j++)
+        {
+            switch (mat[i][j])
+            {
+                case -1:
+                    printf(VERMELHO "   #" RESET);
+                    break;
+                case 0:
+                    printf(BRANCO "%4d" RESET, mat[i][j]);
+                    break;
+                case 1:
+                    printf(AZUL "%4d" RESET, mat[i][j]);
+                    break;
+                case 2:
+                    printf(CIANO "%4d" RESET, mat[i][j]);
+                    break;
+                case 3:
+                    printf(VERDE "%4d" RESET, mat[i][j]);
+                    break;
+                case 4:
+                    printf(AMARELO "%4d" RESET, mat[i][j]);
+                    break;
+                default:
+                    printf(ROSA "%4d" RESET, mat[i][j]);
+                    break;
+            }
+        }
+        printf("\n");
+    }
+}
+
+int venceu(int tam, int mat[tam][tam], int visivel[tam][tam])
+{
+    for (int i = 0; i < tam; i++)
+    {
+        for (int j = 0; j < tam; j++)
+        {
+            if (mat[i][j] != -1 && visivel[i][j] == 0)
+                return 0;   // ainda existe uma célula segura não revelada
+        }
+    }
+    // TODO: função pra colocar toda a matriz como visível
+    // Se chegou até aqui, todas as células seguras estão visíveis.
+    // Revela as bombas para a tela final de vitória
+    for (int i = 0; i < tam; i++)
+        for (int j = 0; j < tam; j++)
+            if (mat[i][j] == -1)
+                visivel[i][j] = 1;
+
+    return 1;   // vitória
 }
 
 int main()
@@ -254,32 +341,45 @@ int main()
     conta_bombas(tam, mat);
 
     clear();
-    print_mat(tam, mat);
-    printf("\n");
-    print_mat(tam, visivel);
+    print_mat(tam, mat, visivel);
+    // print_mat_bombas(tam, mat);
+    printf("\n"  "linha coluna: " RESET);
     
     // entrada do usuário: [linha coluna]
 
     int usr_lin;
     int usr_col;
 
-    // TODO: fazer a lógica de vitória/derrota
-
     while (1)
     {
         scanf("%d%d", &usr_lin, &usr_col);
-        
-        clear();
-        print_mat(tam, mat);
-        set_visivel(tam, mat, visivel, usr_lin, usr_col);
-        printf("\n");
-        print_mat(tam, visivel);
-        
+
         if (usr_col < 0 || usr_col > tam - 1 || usr_lin < 0 || usr_lin > tam - 1)
         {
             break;
         }
+        
+        int res = set_visivel(tam, mat, visivel, usr_lin, usr_col);
+        
+        clear();
+        print_mat(tam, mat, visivel);
+        // print_mat_bombas(tam, mat);
 
+        if (res == -1)
+        {
+            printf(VERMELHO "\nPERDEU!!!\n" RESET);
+            break;
+        }
+
+        if (venceu(tam, mat, visivel))
+        {
+            clear();
+            print_mat(tam, mat, visivel);
+            printf(AZUL  "\nVENCEU!!!\n" RESET);
+            break;
+        }
+
+        printf("\n"  "linha coluna: " RESET);
     }        
     
     return 0;

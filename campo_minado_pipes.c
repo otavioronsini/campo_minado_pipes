@@ -1,8 +1,8 @@
-// TODO: comentar melhor cada parte do código
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
+typedef char byte;
 
 #define RESET    "\033[0m"
 #define VERMELHO "\033[91m"
@@ -13,27 +13,27 @@
 #define CIANO    "\033[96m"
 #define BRANCO   "\033[97m"
 
-// TODO: trocar tipo da mat2 pra byte pra gastar menos memória
+#define TAM 10
 
-void zera_mat(int tam, int mat[tam][tam])
+void zera_mat(byte mat[TAM][TAM])
 {
-    for (int i = 0; i < tam; i++)
+    for (byte i = 0; i < TAM; i++)
     {
-        for (int j = 0; j < tam; j++)
+        for (byte j = 0; j < TAM; j++)
         {
             mat[i][j] = 0;
         }
     }
 }
 
-void coloca_bombas(int tam, int mat[tam][tam])
+void coloca_bombas(byte mat[TAM][TAM])
 {
     srand(time(NULL));
     
-    for (int i = 0; i < 15; i++)
+    for (byte i = 0; i < 15; i++)
     {
-        int linha  = rand() % tam;
-        int coluna = rand() % tam;
+        byte linha  = rand() % TAM;
+        byte coluna = rand() % TAM;
         
         if (mat[linha][coluna] != -1)
         {
@@ -45,32 +45,32 @@ void coloca_bombas(int tam, int mat[tam][tam])
 // TODO: garantir que duas bombas não fiquem no mesmo lugar e
 // sejam colocadas depois da primeira posição que o usuário escolher
 
-void conta_bombas(const int tam, int mat[tam][tam])
+void conta_bombas(byte mat[TAM][TAM])
 {
     // pra cada elemento da matriz que não for uma bomba
      
-    for (int lin = 0; lin < tam; lin++)
+    for (byte lin = 0; lin < TAM; lin++)
     {
-        for (int col = 0; col < tam; col++)
+        for (byte col = 0; col < TAM; col++)
         {
             if (mat[lin][col] == -1)
             {
                 continue;
             }
                 
-            int bombas = 0;
+            byte bombas = 0;
             
             // conta as bombas das posições adjacentes:
             // da linha e coluna anteriores     [lin_adj - 1][col_adj - 1]
             // até a linha e coluna posteriores [lin_adj + 1][col + 1]
             
-            for (int lin_adj = lin - 1; lin_adj <= lin + 1; lin_adj++)
+            for (byte lin_adj = lin - 1; lin_adj <= lin + 1; lin_adj++)
             {
-                for (int col_adj = col - 1; col_adj <= col + 1; col_adj++)
+                for (byte col_adj = col - 1; col_adj <= col + 1; col_adj++)
                 {
                     // verifica se está dentro do limite da matriz e se o elemento é uma bomba
                     
-                    if (lin_adj >= 0 && lin_adj < tam && col_adj >= 0 && col_adj < tam && mat[lin_adj][col_adj] == -1)
+                    if (lin_adj >= 0 && lin_adj < TAM && col_adj >= 0 && col_adj < TAM && mat[lin_adj][col_adj] == -1)
                     {
                         bombas++;
                     }
@@ -83,7 +83,7 @@ void conta_bombas(const int tam, int mat[tam][tam])
 }
 
 
-int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, int usr_col)
+byte set_visivel(byte mat[TAM][TAM], byte visivel[TAM][TAM], byte usr_lin, byte usr_col)
 {
     // se a posição já está visível, não faz nada e retorna o valor dela
 
@@ -105,9 +105,9 @@ int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, 
 
     if (mat[usr_lin][usr_col] == -1)
     {
-        for (int i = 0; i < tam; i++)
+        for (byte i = 0; i < TAM; i++)
         {
-            for (int j = 0; j < tam; j++)
+            for (byte j = 0; j < TAM; j++)
             {
                 visivel[i][j] = 1;
             }
@@ -117,11 +117,11 @@ int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, 
 
     // se é uma posição vazia (0), marca as posições ao redor usando busca em largura
 
-    int fila_linha[tam * tam];
-    int fila_coluna[tam * tam];
+    byte fila_linha[TAM * TAM];
+    byte fila_coluna[TAM * TAM];
     
-    int inicio = 0;
-    int fim = 0;
+    byte inicio = 0;
+    byte fim = 0;
 
     fila_linha[fim] = usr_lin;
     fila_coluna[fim] = usr_col;
@@ -132,8 +132,8 @@ int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, 
     
     while (inicio < fim)
     {
-        int lin = fila_linha[inicio];
-        int col = fila_coluna[inicio];
+        byte lin = fila_linha[inicio];
+        byte col = fila_coluna[inicio];
 
         inicio++;
 
@@ -142,17 +142,17 @@ int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, 
             continue;
         }
 
-        for (int dlin = -1; dlin <= 1; dlin++)
+        for (byte dlin = -1; dlin <= 1; dlin++)
         {
-            for (int dcol = -1; dcol <= 1; dcol++)
+            for (byte dcol = -1; dcol <= 1; dcol++)
             {
                 if (dlin == 0 && dcol == 0)
                     continue;
 
-                int nlin = lin + dlin;
-                int ncol = col + dcol;
+                byte nlin = lin + dlin;
+                byte ncol = col + dcol;
 
-                if (nlin >= 0 && nlin < tam && ncol >= 0 && ncol < tam)
+                if (nlin >= 0 && nlin < TAM && ncol >= 0 && ncol < TAM)
                 {
                     if (visivel[nlin][ncol] == 0 && mat[nlin][ncol] != -1)
                     {
@@ -178,20 +178,20 @@ void clear()
     #endif
 }
 
-void print_mat(int tam, int mat[tam][tam], int visivel[tam][tam])
+void print_mat(byte mat[TAM][TAM], byte visivel[TAM][TAM])
 {
     // número das colunas em azul
     
     printf("\n  ");
 
-    for (int i = 0; i < tam; i++)
+    for (byte i = 0; i < TAM; i++)
     {
         printf("%4d", i);
     }
 
     printf("\n\n");   
     
-    for (int i = 0; i < tam; i++)
+    for (byte i = 0; i < TAM; i++)
     {
         // número das linhas em azul
         
@@ -199,7 +199,7 @@ void print_mat(int tam, int mat[tam][tam], int visivel[tam][tam])
 
         // numeros de cada posição
         
-        for (int j = 0; j < tam; j++)
+        for (byte j = 0; j < TAM; j++)
         {
             if (visivel[i][j] == 0)
             {
@@ -241,21 +241,21 @@ void print_mat(int tam, int mat[tam][tam], int visivel[tam][tam])
 
 // cola pra ficar mais fácil de mostrar a vitória
 
-void print_mat_bombas(int tam, int mat[tam][tam])
+void print_mat_bombas(byte mat[TAM][TAM])
 {
     printf("\n  ");
 
     // cabeçalho das colunas
-    for (int i = 0; i < tam; i++)
+    for (byte i = 0; i < TAM; i++)
         printf("%4d", i);
     printf("\n\n");
 
-    for (int i = 0; i < tam; i++)
+    for (byte i = 0; i < TAM; i++)
     {
         // número da linha
         printf("%-2d", i);
 
-        for (int j = 0; j < tam; j++)
+        for (byte j = 0; j < TAM; j++)
         {
             switch (mat[i][j])
             {
@@ -286,11 +286,11 @@ void print_mat_bombas(int tam, int mat[tam][tam])
     }
 }
 
-int venceu(int tam, int mat[tam][tam], int visivel[tam][tam])
+byte venceu(byte mat[TAM][TAM], byte visivel[TAM][TAM])
 {
-    for (int i = 0; i < tam; i++)
+    for (byte i = 0; i < TAM; i++)
     {
-        for (int j = 0; j < tam; j++)
+        for (byte j = 0; j < TAM; j++)
         {
             if (mat[i][j] != -1 && visivel[i][j] == 0)
                 return 0;   // ainda existe uma célula segura não revelada
@@ -300,52 +300,51 @@ int venceu(int tam, int mat[tam][tam], int visivel[tam][tam])
     // Se chegou até aqui, todas as células seguras estão visíveis.
     // Revela as bombas para a tela final de vitória
 
-    for (int i = 0; i < tam; i++)
-        for (int j = 0; j < tam; j++)
+    for (byte i = 0; i < TAM; i++)
+        for (byte j = 0; j < TAM; j++)
             if (mat[i][j] == -1)
                 visivel[i][j] = 1;
 
     return 1;   // vitória
 }
 
-int main()
+int main(void)
 {
     // cria matriz
 
-    int tam = 10;
-    int mat[tam][tam];
-    int visivel[tam][tam];
+    byte mat[TAM][TAM];
+    byte visivel[TAM][TAM];
 
-    zera_mat(tam, mat);
-    zera_mat(tam, visivel);
+    zera_mat(mat);
+    zera_mat(visivel);
     
-    coloca_bombas(tam, mat);
-    conta_bombas(tam, mat);
+    coloca_bombas(mat);
+    conta_bombas(mat);
 
     clear();
-    print_mat(tam, mat, visivel);
-    // print_mat_bombas(tam, mat);
+    print_mat(mat, visivel);
+    // print_mat_bombas(TAM, mat);
     printf("\n"  "linha coluna: " RESET);
     
     // entrada do usuário: [linha coluna]
 
-    int usr_lin;
-    int usr_col;
+    byte usr_lin;
+    byte usr_col;
 
     while (1)
     {
-        scanf("%d%d", &usr_lin, &usr_col);
+        scanf("%hhd%hhd", &usr_lin, &usr_col);
 
-        if (usr_col < 0 || usr_col > tam - 1 || usr_lin < 0 || usr_lin > tam - 1)
+        if (usr_col < 0 || usr_col > TAM - 1 || usr_lin < 0 || usr_lin > TAM - 1)
         {
             break;
         }
         
-        int res = set_visivel(tam, mat, visivel, usr_lin, usr_col);
+        byte res = set_visivel(mat, visivel, usr_lin, usr_col);
         
         clear();
-        print_mat(tam, mat, visivel);
-        // print_mat_bombas(tam, mat);
+        print_mat(mat, visivel);
+        // print_mat_bombas(TAM, mat);
 
         if (res == -1)
         {
@@ -353,10 +352,10 @@ int main()
             break;
         }
 
-        if (venceu(tam, mat, visivel))
+        if (venceu(mat, visivel))
         {
             clear();
-            print_mat(tam, mat, visivel);
+            print_mat(mat, visivel);
             printf(AZUL  "\nVENCEU!!!\n" RESET);
             break;
         }

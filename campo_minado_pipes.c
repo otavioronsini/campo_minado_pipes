@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define RESET     "\033[0m"
-#define VERMELHO  "\033[91m"
-#define VERDE     "\033[92m"
-#define AMARELO   "\033[93m"
-#define AZUL      "\033[94m"
-#define ROSA      "\033[95m"
-#define CIANO     "\033[96m"
-#define BRANCO    "\033[97m"
+#define RESET    "\033[0m"
+#define VERMELHO "\033[91m"
+#define VERDE    "\033[92m"
+#define AMARELO  "\033[93m"
+#define AZUL     "\033[94m"
+#define ROSA     "\033[95m"
+#define CIANO    "\033[96m"
+#define BRANCO   "\033[97m"
 
 // TODO: trocar tipo da mat2 pra byte pra gastar menos memória
 
@@ -82,34 +82,29 @@ void conta_bombas(const int tam, int mat[tam][tam])
     }
 }
 
-/**
- * Função que revela as células a partir de uma posição (usr_lin, usr_col)
- * usando Busca em Largura (BFS) com fila manual.
- * 
- * Parâmetros:
- *   tam     : tamanho da matriz (tam x tam)
- *   mat     : matriz com os valores (-1 = bomba, 0 = vazio, 1..8 = número de bombas)
- *   visivel : matriz que indica se a célula já foi revelada (1) ou não (0)
- *   usr_lin, usr_col : coordenada escolhida pelo usuário
- * 
- * Retorno:
- *   -1 se clicou em bomba (e revela tudo)
- *    0 se abriu células com segurança
- *    ou o valor da célula se já estava visível (opcional)
- */
- 
+
 int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, int usr_col)
 {
-    // 1) Se a posição já está visível, não faz nada e retorna o valor dela
+    // se a posição já está visível, não faz nada e retorna o valor dela
+
     if (visivel[usr_lin][usr_col] == 1)
     {
         return mat[usr_lin][usr_col];
     }
 
-    // 2) Se a posição é uma bomba (-1), revela todas as células e termina o jogo
+    // se estiver perto de alguma bomba (> 0), marca só ela e retorna o número
+
+    if (mat[usr_lin][usr_col] > 0)
+    {
+        visivel[usr_lin][usr_col] = 1;
+
+        return mat[usr_lin][usr_col];
+    }
+    
+    // se a posição é uma bomba (-1), marca todas as células e retorna -1
+
     if (mat[usr_lin][usr_col] == -1)
     {
-        // Revela tudo (perdeu)
         for (int i = 0; i < tam; i++)
         {
             for (int j = 0; j < tam; j++)
@@ -117,75 +112,60 @@ int set_visivel(int tam, int mat[tam][tam], int visivel[tam][tam], int usr_lin, 
                 visivel[i][j] = 1;
             }
         }
-        return -1;   // indica que foi bomba
+        return -1;
     }
 
-    // 3) Se não é bomba, vamos usar uma fila para fazer a expansão em largura
-    // Criamos dois vetores para armazenar as coordenadas (linha e coluna) das células a serem processadas.
-    // O tamanho máximo da fila é tam * tam (todas as células da matriz).
+    // se é uma posição vazia (0), marca as posições ao redor usando busca em largura
+
     int fila_linha[tam * tam];
     int fila_coluna[tam * tam];
     
-    // Índices para controlar a fila:
-    // - 'inicio' aponta para o próximo elemento a ser processado
-    // - 'fim' aponta para a próxima posição vazia onde podemos adicionar um novo elemento
     int inicio = 0;
     int fim = 0;
 
-    // Colocamos a célula inicial (usr_lin, usr_col) na fila e a marcamos como visível
     fila_linha[fim] = usr_lin;
     fila_coluna[fim] = usr_col;
-    fim++;  // incrementa para a próxima posição livre
+    
+    fim++;
 
-    visivel[usr_lin][usr_col] = 1;   // marca como já revelada
-
-    // Agora, enquanto houver elementos na fila (inicio < fim), processamos cada um
+    visivel[usr_lin][usr_col] = 1;
+    
     while (inicio < fim)
     {
-        // Pega a próxima célula da fila (a que está no índice 'inicio')
         int lin = fila_linha[inicio];
         int col = fila_coluna[inicio];
-        inicio++;   // avança o ponteiro de início
 
-        // Se a célula atual tem um número > 0, ela não deve se expandir para os vizinhos.
-        // Apenas a revelamos (já está visível) e pulamos a parte de adicionar vizinhos.
+        inicio++;
+
         if (mat[lin][col] > 0)
         {
-            continue;   // vai para a próxima iteração do while, sem expandir
+            continue;
         }
 
-        // Se a célula atual é 0, precisamos olhar todos os seus vizinhos (8 direções)
-        // e, se eles ainda não estiverem visíveis e não forem bombas, adicioná-los à fila.
         for (int dlin = -1; dlin <= 1; dlin++)
         {
             for (int dcol = -1; dcol <= 1; dcol++)
             {
-                // Ignora o próprio (deslocamento 0,0)
                 if (dlin == 0 && dcol == 0)
                     continue;
 
-                // Calcula as coordenadas do vizinho
                 int nlin = lin + dlin;
                 int ncol = col + dcol;
 
-                // Verifica se o vizinho está dentro dos limites da matriz
                 if (nlin >= 0 && nlin < tam && ncol >= 0 && ncol < tam)
                 {
-                    // Se o vizinho ainda não está visível e não é uma bomba
                     if (visivel[nlin][ncol] == 0 && mat[nlin][ncol] != -1)
                     {
-                        // Marca como visível e adiciona na fila para ser processado depois
                         visivel[nlin][ncol] = 1;
                         fila_linha[fim] = nlin;
                         fila_coluna[fim] = ncol;
-                        fim++;   // aumenta o tamanho da fila
+                        fim++;
                     }
                 }
             }
         }
     }
 
-    // Se chegou até aqui, tudo correu bem e nenhuma bomba foi aberta
     return 0;
 }
 
@@ -259,7 +239,8 @@ void print_mat(int tam, int mat[tam][tam], int visivel[tam][tam])
     }
 }
 
-// cola pra mostrar a vitória
+// cola pra ficar mais fácil de mostrar a vitória
+
 void print_mat_bombas(int tam, int mat[tam][tam])
 {
     printf("\n  ");
@@ -318,6 +299,7 @@ int venceu(int tam, int mat[tam][tam], int visivel[tam][tam])
     // TODO: função pra colocar toda a matriz como visível
     // Se chegou até aqui, todas as células seguras estão visíveis.
     // Revela as bombas para a tela final de vitória
+
     for (int i = 0; i < tam; i++)
         for (int j = 0; j < tam; j++)
             if (mat[i][j] == -1)

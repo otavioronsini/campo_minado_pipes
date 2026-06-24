@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <unistd.h> //para não dar erro feio no terminal :)
 
 typedef char byte;
 
@@ -309,8 +311,138 @@ byte venceu(byte mat[N][N], byte visivel[N][N])
     return 1;
 }
 
+int servidor_campo_minado(int readfd,int writefd)
+{
+    byte mat[N][N];            // matriz com os valores de -1 a 8, cada número indica quantas bombas têm ao redor daquela posição
+    byte visivel[N][N];        // matriz com valores 0 e 1, indica se os números daquela posição em mat estão visíveis ao usuário
+
+    int status = 0;            //define o estado do jogo, sendo "0" = jogando, "1" = a venceu e "-1" = perdeu
+
+    zera_mat(mat);
+    zera_mat(visivel);
+    
+    coloca_bombas(mat);
+    conta_bombas(mat);
+    
+    byte usr_lin; // número da linha digita pelo usuário
+    byte usr_col; // número da coluna digitada pelo usuário
+
+    while(1)
+    {
+        write(writefd, mat, N*N);
+        write(writefd, visivel, N*N);
+        write(writefd, &status, sizeof(int));
+
+        if(status != 0) break;
+
+        read(readfd, &usr_lin, sizeof(byte));
+        read(readfd, &usr_col, sizeof(byte));
+
+        byte res = set_visivel(mat, visivel, usr_lin, usr_col);
+
+        if(res == -1)
+        {
+            status =- 1;
+        }
+
+        else if(venceu(mat, visivel))
+        {
+            status = 1;
+        }
+    }
+}
+
+int cliente_campo_minado(int readfd, int writefd)
+{
+    byte mat[N][N];
+    byte visivel[N][N];
+
+    int status = 0;
+
+    byte usr_lin;
+    byte usr_col;
+
+    while(1)
+    {
+        read(readfd, mat, N*N);
+        read(readfd, visivel, N*N);
+        read(readfd, &status, sizeof(int));
+
+        clear();
+        print_mat(mat, visivel);
+
+        if(status == -1)
+        {
+            printf(VERMELHO "\nperdeu!\n" RESET);
+        }
+
+        else if(status == 1)
+        {
+            printf(AZUL "Venceu!" RESET);
+        }
+
+        printf("\nSelecione a linha e coluna: ");
+
+        if(scanf("%hhd%hhd", &usr_lin, &usr_col) != 2) break;
+
+        if(usr_col < 0 || usr_col > N - 1 || usr_lin < 0 || usr_lin > N - 1)
+        {
+            break;
+        }
+
+        write(writefd, &usr_lin, sizeof(byte));
+        write(writefd, &usr_col, sizeof(byte));
+    }
+}
 
 int main(void)
+{
+
+    int descritor,
+        pipe1[2],
+        pipe2[2];
+
+    if (pipe(pipe1)<0 || pipe(pipe2) <0)
+    { printf("Erro na chamada PIPE");
+        exit(0);
+    }
+
+    if ( (descritor = fork()) <0)
+    { printf("Erro na chamada FORK");
+        exit(0);
+    }
+
+    else if (descritor >0) // PROCESSO PAI
+    { 
+        close(pipe1[0]);
+        close(pipe2[1]);
+
+        cliente_campo_minado(pipe2[0], pipe1[1]);
+        
+        close(pipe1[1]);
+        close(pipe2[0]);
+        exit(0);
+    } 
+
+    else // PROCESSO FILHO
+    { 
+        close(pipe1[1]);
+        close(pipe2[0]);
+
+        servidor_campo_minado(pipe1[0], pipe2[1]);
+
+        close(pipe1[0]);
+        close(pipe2[1]);
+        exit(0);
+}
+
+
+    //campo_minado();
+    
+    return 0;
+}
+
+/*int campo_minado(void)               //deixou de existir para ser particionada em servidor_campo_minado e cliente_campo_minado
 {
     byte mat[N][N];     // matriz com os valores de -1 a 8, cada número indica quantas bombas têm ao redor daquela posição
     byte visivel[N][N]; // matriz com valores 0 e 1, indica se os números daquela posição em mat estão visíveis ao usuário
@@ -362,4 +494,6 @@ int main(void)
     }        
     
     return 0;
-}
+}*/
+
+// te odeio otávio

@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-typedef char byte;
-
 #define RESET    "\033[0m"
 #define VERMELHO "\033[91m"
 #define VERDE    "\033[92m"
@@ -13,8 +11,11 @@ typedef char byte;
 #define CIANO    "\033[96m"
 #define BRANCO   "\033[97m"
 
-// número de linhas e colunas das matrizes
-#define N 10
+#define N 10 // número de linhas e colunas das matrizes
+
+typedef char byte;
+
+// TODO: criar uma struct com as duas matrizes para ficar mais legível
 
 void zera_mat(byte mat[N][N])
 {
@@ -83,6 +84,7 @@ void conta_bombas(byte mat[N][N])
     }
 }
 
+// TODO: mudar o algoritmo para coloar só posições 0 na fila
 
 byte set_visivel(byte mat[N][N], byte visivel[N][N], byte usr_lin, byte usr_col)
 {
@@ -314,7 +316,7 @@ int main(void)
 {
     byte mat[N][N];     // matriz com os valores de -1 a 8, cada número indica quantas bombas têm ao redor daquela posição
     byte visivel[N][N]; // matriz com valores 0 e 1, indica se os números daquela posição em mat estão visíveis ao usuário
-
+    
     zera_mat(mat);
     zera_mat(visivel);
     
@@ -323,7 +325,7 @@ int main(void)
 
     clear();
     print_mat(mat, visivel);
-    // print_mat_bombas(N, mat);
+    print_mat_bombas(mat);
     printf("\n"  "linha coluna: " RESET);
     
     byte usr_lin; // número da linha digita pelo usuário
@@ -342,7 +344,7 @@ int main(void)
         
         clear();
         print_mat(mat, visivel);
-        // print_mat_bombas(N, mat);
+        print_mat_bombas(mat);
 
         if (res == -1)
         {

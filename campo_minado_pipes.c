@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <string.h>
-#include <unistd.h> //para não dar erro feio no terminal :)
-
+#include <unistd.h>
+ 
 #define RESET    "\033[0m"
 #define VERMELHO "\033[91m"
 #define VERDE    "\033[92m"
@@ -19,7 +18,7 @@ typedef char byte;
 
 // TODO: criar uma struct com as duas matrizes para ficar mais legível
 
-void zera_mat(byte mat[N][N])
+void zera_mat(byte mat[N][N]) // faz cada posição da matriz = 0
 {
     for (byte lin = 0; lin < N; lin++) // linha
     {
@@ -30,30 +29,35 @@ void zera_mat(byte mat[N][N])
     }
 }
 
-void coloca_bombas(byte mat[N][N])
+// TODO: garantir que as minas sejam colocadas depois da primeira posição que o usuário escolher
+
+void coloca_minas(byte mat[N][N]) // coloca 15 minas em posições aleatórioas no campo minado
 {
     srand(time(NULL));
+
+    byte minas = 0;
     
-    for (byte i = 0; i < 15; i++)
+    while (minas < 15)
     {
-        byte linha  = rand() % N;
-        byte coluna = rand() % N;
-        
-        if (mat[linha][coluna] != -1)
+        byte lin = rand() % N;    
+        byte col = rand() % N;
+
+        if (mat[lin][col] == -1)
         {
-             mat[linha][coluna] = -1;
+            continue;
         }
+
+        mat[lin][col] = -1;
+
+        minas++;
     }
 }
 
-// TODO: garantir que duas bombas não fiquem no mesmo lugar e
-// sejam colocadas depois da primeira posição que o usuário escolher
 
-void conta_bombas(byte mat[N][N])
+
+void conta_minas(byte mat[N][N]) // conta quantas minas têm ao redor de cada posição
 {
-    // pra cada elemento da matriz que não for uma bomba
-     
-    for (byte lin = 0; lin < N; lin++)
+    for (byte lin = 0; lin < N; lin++) // pra cada elemento da matriz que não for uma mina
     {
         for (byte col = 0; col < N; col++)
         {
@@ -62,31 +66,37 @@ void conta_bombas(byte mat[N][N])
                 continue;
             }
                 
-            byte bombas = 0;
+            byte minas = 0;
             
-            // conta as bombas das posições adjacentes:
-            // da linha e coluna anteriores     [lin_adj - 1][col_adj - 1]
-            // até a linha e coluna posteriores [lin_adj + 1][col + 1]
+            // da linha e coluna anteriores     [linha da posição atual - 1][coluna da posição atual - 1]
+            // até a linha e coluna posteriores [linha da posição atual + 1][coluna da posição atual + 1]
             
-            for (byte lin_adj = lin - 1; lin_adj <= lin + 1; lin_adj++)
+            for (byte lin_at = lin - 1; lin_at <= lin + 1; lin_at++) // linha atual
             {
-                for (byte col_adj = col - 1; col_adj <= col + 1; col_adj++)
+                for (byte col_at = col - 1; col_at <= col + 1; col_at++) // coluna atual
                 {
-                    // verifica se está dentro do limite da matriz e se o elemento é uma bomba
+                    // verifica se a posição está fora dos limite da matriz
                     
-                    if (lin_adj >= 0 && lin_adj < N && col_adj >= 0 && col_adj < N && mat[lin_adj][col_adj] == -1)
+                    if (lin_at < 0 || lin_at >= N || col_at < 0 || col_at >= N)
+                        continue;
+                        
+                    // verifica se não é uma bomba
+
+                    if (mat[lin_at][col_at] != -1)
                     {
-                        bombas++;
+                        continue;        
                     }
+
+                    minas++;
                 }
             }
             
-            mat[lin][col] = bombas;
+            mat[lin][col] = minas;
         }
     }
 }
 
-// TODO: mudar o algoritmo para coloar só posições 0 na fila
+// marca as posições que serão mostradas ao usuário e retorna o valor da posição atual (-1, 0, > 0)
 
 byte set_visivel(byte mat[N][N], byte visivel[N][N], byte usr_lin, byte usr_col)
 {
@@ -97,7 +107,7 @@ byte set_visivel(byte mat[N][N], byte visivel[N][N], byte usr_lin, byte usr_col)
         return mat[usr_lin][usr_col];
     }
 
-    // se estiver perto de alguma bomba (> 0), marca só ela e retorna o número
+    // se estiver perto de alguma mina (> 0), marca só ela e retorna o número
 
     if (mat[usr_lin][usr_col] > 0)
     {
@@ -106,7 +116,7 @@ byte set_visivel(byte mat[N][N], byte visivel[N][N], byte usr_lin, byte usr_col)
         return mat[usr_lin][usr_col];
     }
     
-    // se a posição é uma bomba (-1), marca todas as células e retorna -1
+    // se a posição é uma mina (-1), marca todas as células e retorna -1
 
     if (mat[usr_lin][usr_col] == -1)
     {
@@ -120,57 +130,41 @@ byte set_visivel(byte mat[N][N], byte visivel[N][N], byte usr_lin, byte usr_col)
         return -1;
     }
 
-    // se é uma posição vazia (0), marca as posições ao redor usando busca em largura
+    // se é uma posição vazia (0), marca as posições ao redor usando recursão
+    // verifica as 8 posições ao redor da posição atual
+    // se for -1, não faz nada
+    // se for > 0, só marca como visível
+    // se for 0, marca como visível e chama a função recursivamente
 
-    byte fila_linha[N * N];
-    byte fila_coluna[N * N];
-    
-    byte inicio = 0;
-    byte fim = 0;
-
-    fila_linha[fim] = usr_lin;
-    fila_coluna[fim] = usr_col;
-    
-    fim++;
-
-    visivel[usr_lin][usr_col] = 1;
-    
-    while (inicio < fim)
+    visivel[usr_lin][usr_col] = 1; // marca a posição atual como visível
+        
+    for (byte lin_at = usr_lin - 1; lin_at <= usr_lin + 1; lin_at++) // percorre as 8 posições ao redor
     {
-        byte lin = fila_linha[inicio];
-        byte col = fila_coluna[inicio];
-
-        inicio++;
-
-        if (mat[lin][col] > 0)
+        for (byte col_at = usr_col - 1; col_at <= usr_col + 1; col_at++)
         {
-            continue;
-        }
-
-        for (byte dlin = -1; dlin <= 1; dlin++)
-        {
-            for (byte dcol = -1; dcol <= 1; dcol++)
+            // verifica se a posição está fora dos limites da matriz
+                    
+            if (lin_at < 0 || lin_at >= N || col_at < 0 || col_at >= N)
             {
-                if (dlin == 0 && dcol == 0)
-                    continue;
-
-                byte nlin = lin + dlin;
-                byte ncol = col + dcol;
-
-                if (nlin >= 0 && nlin < N && ncol >= 0 && ncol < N)
-                {
-                    if (visivel[nlin][ncol] == 0 && mat[nlin][ncol] != -1)
-                    {
-                        visivel[nlin][ncol] = 1;
-                        fila_linha[fim] = nlin;
-                        fila_coluna[fim] = ncol;
-                        fim++;
-                    }
-                }
+                continue;
             }
+
+            if (mat[lin_at][col_at] == -1) // pula se é uma mina
+            {
+                continue;        
+            }
+
+            if (mat[lin_at][col_at] > 0) // se for > 0 só marca como visível
+            {
+                visivel[lin_at][col_at] = 1;
+                    
+                continue;
+            }
+
+            set_visivel(mat, visivel, lin_at, col_at); // se for 0, marca como visível e chama recursivamente
         }
     }
-
+    
     return 0;
 }
 
@@ -246,7 +240,7 @@ void print_mat(byte mat[N][N], byte visivel[N][N])
 
 // cola pra ficar mais fácil de mostrar a vitória
 
-void print_mat_bombas(byte mat[N][N])
+void print_mat_minas(byte mat[N][N])
 {
     printf("\n  ");
 
@@ -303,7 +297,7 @@ byte venceu(byte mat[N][N], byte visivel[N][N])
     }
     
     // se chegou até aqui, todas as posições > 0 estão visíveis
-    // mostra todas as bombas
+    // mostra todas as minas
 
     for (byte i = 0; i < N; i++)
         for (byte j = 0; j < N; j++)
@@ -313,189 +307,209 @@ byte venceu(byte mat[N][N], byte visivel[N][N])
     return 1;
 }
 
-int servidor_campo_minado(int readfd,int writefd)
+/*
+ * ============================================================
+ * COMUNICAÇÃO ENTRE PROCESSOS USANDO PIPES
+ * ============================================================
+ * 
+ * Servidor (filho):  processa a lógica do jogo (minas, contagem, etc.)
+ * Cliente (pai):     mostra o tabuleiro e recebe os cliques do usuário
+ * 
+ * Fluxo de comunicação:
+ * 
+ *   Cliente (Pai)  ←─── pipe_servidor_para_cliente ───  Servidor (Filho)
+ *   (mostra jogo)  ──── pipe_cliente_para_servidor ──→  (processa lógica)
+ * 
+ * pipe_servidor_para_cliente:  Servidor ESCREVE, Cliente LÊ
+ * pipe_cliente_para_servidor:  Cliente ESCREVE, Servidor LÊ
+ * ============================================================
+ */
+
+// Servidor: processa a lógica do jogo
+// readfd  = pipe onde o servidor RECEBE dados do cliente (cliente→servidor)
+// writefd = pipe onde o servidor ENVIA dados para o cliente (servidor→cliente)
+
+void servidor_campo_minado(int readfd, int writefd)
 {
-    byte mat[N][N];            // matriz com os valores de -1 a 8, cada número indica quantas bombas têm ao redor daquela posição
-    byte visivel[N][N];        // matriz com valores 0 e 1, indica se os números daquela posição em mat estão visíveis ao usuário
-
-    int status = 0;            //define o estado do jogo, sendo "0" = jogando, "1" = a venceu e "-1" = perdeu
-
+    byte mat[N][N];     // matriz com os valores de -1 a 8 (minas e números)
+    byte visivel[N][N]; // matriz com 0 e 1 (o que está visível)
+    int status = 0;     // 0 = jogando, 1 = venceu, -1 = perdeu
+    
+    byte usr_lin;       // linha escolhida pelo usuário
+    byte usr_col;       // coluna escolhida pelo usuário
+    
+    // Inicializa o jogo
     zera_mat(mat);
     zera_mat(visivel);
+    coloca_minas(mat);
+    conta_minas(mat);
     
-    coloca_bombas(mat);
-    conta_bombas(mat);
-    
-    byte usr_lin; // número da linha digita pelo usuário
-    byte usr_col; // número da coluna digitada pelo usuário
-
-    while(1)
+    while (1)
     {
-        write(writefd, mat, N*N);
-        write(writefd, visivel, N*N);
-        write(writefd, &status, sizeof(int));
-
-        if(status != 0) break;
-
+        // ============================================================
+        // 1. Envia o estado atual do jogo para o cliente
+        // ============================================================
+        write(writefd, mat, N * N);         // envia a matriz de números
+        write(writefd, visivel, N * N);     // envia a matriz de visibilidade
+        write(writefd, &status, sizeof(int)); // envia o status do jogo
+        
+        // Se o jogo terminou (venceu ou perdeu), sai do loop
+        if (status != 0)
+            break;
+        
+        // ============================================================
+        // 2. Recebe do cliente a posição que o usuário escolheu
+        // ============================================================
         read(readfd, &usr_lin, sizeof(byte));
         read(readfd, &usr_col, sizeof(byte));
-
+        
+        // ============================================================
+        // 3. Processa o clique do usuário
+        // ============================================================
         byte res = set_visivel(mat, visivel, usr_lin, usr_col);
-
-        if(res == -1)
+        
+        // Verifica se o jogador perdeu
+        if (res == -1)
         {
-            status =- 1;
+            status = -1;  // ATENÇÃO: é "status = -1", NÃO "status =- 1"!
         }
-
-        else if(venceu(mat, visivel))
+        // Verifica se o jogador venceu
+        else if (venceu(mat, visivel))
         {
             status = 1;
         }
+        
+        // O loop recomeça e envia o novo estado (com o status atualizado)
     }
 }
 
-int cliente_campo_minado(int readfd, int writefd)
+// Cliente: mostra o jogo e recebe os cliques do usuário
+// readfd  = pipe onde o cliente RECEBE dados do servidor (servidor→cliente)
+// writefd = pipe onde o cliente ENVIA dados para o servidor (cliente→servidor)
+void cliente_campo_minado(int readfd, int writefd)
 {
-    byte mat[N][N];
-    byte visivel[N][N];
-
-    int status = 0;
-
-    byte usr_lin;
-    byte usr_col;
-
-    while(1)
+    byte mat[N][N];     // matriz com os valores do jogo
+    byte visivel[N][N]; // matriz de visibilidade
+    int status = 0;     // status do jogo (recebido do servidor)
+    
+    byte usr_lin;       // linha que o usuário vai digitar
+    byte usr_col;       // coluna que o usuário vai digitar
+    
+    while (1)
     {
-        read(readfd, mat, N*N);
-        read(readfd, visivel, N*N);
+        // ============================================================
+        // 1. Recebe o estado atual do jogo enviado pelo servidor
+        // ============================================================
+        read(readfd, mat, N * N);
+        read(readfd, visivel, N * N);
         read(readfd, &status, sizeof(int));
-
-        clear();
-        print_mat(mat, visivel);
-
-        if(status == -1)
+        
+        // ============================================================
+        // 2. Mostra o tabuleiro para o usuário
+        // ============================================================
+        clear();                      // limpa a tela
+        print_mat(mat, visivel);      // mostra o tabuleiro
+        // print_mat_minas(mat);
+        
+        // Se o jogo terminou, mostra a mensagem e sai
+        if (status == -1)
         {
-            printf(VERMELHO "\nperdeu!\n" RESET);
-        }
-
-        else if(status == 1)
-        {
-            printf(AZUL "Venceu!" RESET);
-        }
-
-        printf("\nSelecione a linha e coluna: ");
-
-        if(scanf("%hhd%hhd", &usr_lin, &usr_col) != 2) break;
-
-        if(usr_col < 0 || usr_col > N - 1 || usr_lin < 0 || usr_lin > N - 1)
-        {
+            printf(VERMELHO "\nPERDEU!!!\n" RESET);
             break;
         }
-
+        else if (status == 1)
+        {
+            printf(AZUL "\nVENCEU!!!\n" RESET);
+            break;
+        }
+        
+        // ============================================================
+        // 3. Pede a posição para o usuário
+        // ============================================================
+        printf("\nlinha coluna: ");
+        
+        // Lê as coordenadas
+        if (scanf("%hhd %hhd", &usr_lin, &usr_col) != 2)
+            break;
+        
+        // Verifica se as coordenadas são válidas
+        if (usr_lin < 0 || usr_lin >= N || usr_col < 0 || usr_col >= N)
+            break;
+        
+        // ============================================================
+        // 4. Envia a posição escolhida para o servidor
+        // ============================================================
         write(writefd, &usr_lin, sizeof(byte));
         write(writefd, &usr_col, sizeof(byte));
+        
+        // O loop recomeça: espera o servidor processar e enviar o novo estado
     }
 }
 
 int main(void)
 {
-
-    int descritor,
-        pipe1[2],
-        pipe2[2];
-
-    if (pipe(pipe1)<0 || pipe(pipe2) <0)
-    { printf("Erro na chamada PIPE");
-        exit(0);
-    }
-
-    if ( (descritor = fork()) <0)
-    { printf("Erro na chamada FORK");
-        exit(0);
-    }
-
-    else if (descritor >0) // PROCESSO PAI
-    { 
-        close(pipe1[0]);
-        close(pipe2[1]);
-
-        cliente_campo_minado(pipe2[0], pipe1[1]);
-        
-        close(pipe1[1]);
-        close(pipe2[0]);
-        exit(0);
-    } 
-
-    else // PROCESSO FILHO
-    { 
-        close(pipe1[1]);
-        close(pipe2[0]);
-
-        servidor_campo_minado(pipe1[0], pipe2[1]);
-
-        close(pipe1[0]);
-        close(pipe2[1]);
-        exit(0);
-}
-
-
-    //campo_minado();
+    int descritor;
     
-    return 0;
-}
-
-/*int campo_minado(void)               //deixou de existir para ser particionada em servidor_campo_minado e cliente_campo_minado
-{
-    byte mat[N][N];     // matriz com os valores de -1 a 8, cada número indica quantas bombas têm ao redor daquela posição
-    byte visivel[N][N]; // matriz com valores 0 e 1, indica se os números daquela posição em mat estão visíveis ao usuário
+    // ============================================================
+    // PIPES: nomes intuitivos para facilitar o entendimento
+    // ============================================================
+    // pipe_servidor_para_cliente[0] = leitura  (cliente LÊ do servidor)
+    // pipe_servidor_para_cliente[1] = escrita (servidor ESCREVE para o cliente)
+    //
+    // pipe_cliente_para_servidor[0] = leitura  (servidor LÊ do cliente)
+    // pipe_cliente_para_servidor[1] = escrita (cliente ESCREVE para o servidor)
+    // ============================================================
+    int pipe_servidor_para_cliente[2];
+    int pipe_cliente_para_servidor[2];
     
-    zera_mat(mat);
-    zera_mat(visivel);
-    
-    coloca_bombas(mat);
-    conta_bombas(mat);
-
-    clear();
-    print_mat(mat, visivel);
-    print_mat_bombas(mat);
-    printf("\n"  "linha coluna: " RESET);
-    
-    byte usr_lin; // número da linha digita pelo usuário
-    byte usr_col; // número da coluna digitada pelo usuário
-
-    while (1)
+    // Cria os dois pipes
+    if (pipe(pipe_servidor_para_cliente) < 0 || pipe(pipe_cliente_para_servidor) < 0)
     {
-        scanf("%hhd%hhd", &usr_lin, &usr_col);
-
-        if (usr_col < 0 || usr_col > N - 1 || usr_lin < 0 || usr_lin > N - 1)
-        {
-            break;
-        }
+        printf("Erro na chamada PIPE\n");
+        exit(0);
+    }
+    
+    // Cria o processo filho
+    if ((descritor = fork()) < 0)
+    {
+        printf("Erro na chamada FORK\n");
+        exit(0);
+    }
+    
+    if (descritor > 0)  // ========================== PROCESSO PAI (CLIENTE)
+    {
+        // Fecha as pontas dos pipes que o pai NÃO vai usar:
+        close(pipe_servidor_para_cliente[1]); // pai não escreve neste pipe
+        close(pipe_cliente_para_servidor[0]); // pai não lê deste pipe
         
-        byte res = set_visivel(mat, visivel, usr_lin, usr_col);
+        // O pai é o CLIENTE:
+        // - LÊ  do pipe_servidor_para_cliente[0] (dados vindos do servidor)
+        // - ESCREVE no pipe_cliente_para_servidor[1] (envia dados para o servidor)
+        cliente_campo_minado(pipe_servidor_para_cliente[0], 
+                             pipe_cliente_para_servidor[1]);
         
-        clear();
-        print_mat(mat, visivel);
-        print_mat_bombas(mat);
-
-        if (res == -1)
-        {
-            printf(VERMELHO "\nPERDEU!!!\n" RESET);
-            break;
-        }
-
-        if (venceu(mat, visivel))
-        {
-            clear();
-            print_mat(mat, visivel);
-            printf(AZUL  "\nVENCEU!!!\n" RESET);
-            break;
-        }
-
-        printf("\n"  "linha coluna: " RESET);
-    }        
+        // Fecha as pontas restantes
+        close(pipe_servidor_para_cliente[0]);
+        close(pipe_cliente_para_servidor[1]);
+        exit(0);
+    }
+    else  // ========================== PROCESSO FILHO (SERVIDOR)
+    {
+        // Fecha as pontas dos pipes que o filho NÃO vai usar:
+        close(pipe_servidor_para_cliente[0]); // filho não lê deste pipe
+        close(pipe_cliente_para_servidor[1]); // filho não escreve neste pipe
+        
+        // O filho é o SERVIDOR:
+        // - LÊ  do pipe_cliente_para_servidor[0] (dados vindos do cliente)
+        // - ESCREVE no pipe_servidor_para_cliente[1] (envia dados para o cliente)
+        servidor_campo_minado(pipe_cliente_para_servidor[0], 
+                              pipe_servidor_para_cliente[1]);
+        
+        // Fecha as pontas restantes
+        close(pipe_cliente_para_servidor[0]);
+        close(pipe_servidor_para_cliente[1]);
+        exit(0);
+    }
     
     return 0;
-}*/
-
-// te odeio otávio
+}
